@@ -20,11 +20,12 @@ class Word:
         while index + 1 <= total_length:
             x, y = self.data[index], self.data[index + 1]
 
-            if x == -64 and y == -64:
-                break
             if x == -64 and y == 0:
-                self.strokes.append(current_stroke)
-                current_stroke = []
+                if current_stroke:
+                    self.strokes.append(current_stroke)
+                    current_stroke = []
+            elif x == -64 and y == -64:
+                break
             else:
                 current_stroke.append((x, y))
 
@@ -33,43 +34,48 @@ class Word:
         if current_stroke:
             self.strokes.append(current_stroke)
 
-    def draw_stroke(self, stroke):
+    def identify_radical(self):
         """
-        绘制单个笔画
-        :param stroke: 笔画的点坐标列表
+        识别汉字的部首部分，将其作为一个整体返回
+        :return: 部首的所有笔画列表
         """
-        for i in range(len(stroke) - 1):
-            x1, y1 = stroke[i]
-            x2, y2 = stroke[i + 1]
-            plt.plot([x1, x2], [-y1, -y2], marker='.', color='k')
-            plt.pause(0.2)
+        radical_strokes = []
 
-    def draw(self, draw_all, stroke_index):
+        # 假设部首通常在汉字左侧或顶部，根据x坐标值判断
+        for stroke in self.strokes:
+            if all(point[0] <= 0 for point in stroke): 
+                radical_strokes.append(stroke)
+        
+        return radical_strokes
+
+    def draw_radical(self):
         """
-        绘制汉字矢量图
-        :param draw_all: 是否绘制所有笔画
-        :param stroke_index: 要绘制的单个笔画的索引
+        连贯绘制汉字的部首
         """
-        plt.figure(figsize=(10, 10))
+        radical_strokes = self.identify_radical()
+
+        if not radical_strokes:
+            print("未识别到部首")
+            return
+
+        plt.figure(figsize=(6, 6))
         plt.xlim(-20, 20)
         plt.ylim(-20, 20)
 
-        if draw_all:
-            for stroke in self.strokes:
-                self.draw_stroke(stroke)
-        else:
-            self.draw_stroke(self.strokes[stroke_index])
+        # 绘制部首的所有笔画作为整体
+        for stroke in radical_strokes:
+            x_coords, y_coords = zip(*stroke)  # 提取所有点的x和y坐标
+            plt.plot(x_coords, [-y for y in y_coords], marker='.', color='k')
 
         plt.axis('equal')
+        plt.title("识别出的部首（连贯输出）")
         plt.show()
 
-def run(file_path, word_index, draw_all, stroke_index):
+def run(file_path, word_index):
     """
-    运行汉字矢量图切分和绘制
+    运行汉字矢量图切分和绘制部首
     :param file_path: 汉字矢量图点坐标文件路径
     :param word_index: 要处理的汉字索引
-    :param draw_all: 是否绘制所有笔画
-    :param stroke_index: 要绘制的单个笔画的索引
     """
     words = []
 
@@ -79,7 +85,8 @@ def run(file_path, word_index, draw_all, stroke_index):
             words.append(Word(data))
 
     words[word_index].split_dot()
-    words[word_index].draw(draw_all, stroke_index)
+    words[word_index].draw_radical()
 
 if __name__ == '__main__':
-    run(r"hz（去噪声）.txt", 1, True, 2)
+    # 示例运行，选择第一个汉字（索引0）
+    run(r"hz（去噪声）.txt", 0)
